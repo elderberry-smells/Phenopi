@@ -1,0 +1,21 @@
+{% extends "layout.html" %}
+{% block content %}
+    <div class="about-section">
+      <h1>{{ title }}</h1>
+      <p></p>
+      <p>Click a thumbnail below to connect to that Raspberry Pi</p>
+    </div>
+<!-- Make a column of all Pis in the database -->
+    <div class="pi-row mt-4">
+      {% for pi in picam %}
+      <div class="pi-column">
+        <div class="pi-container">
+            <a href="{{ url_for('pi_config', pi_name=pi.id) }}">
+                <img src="{{ url_for('static', filename=pi.image_file) }}" width="300" height="200">
+                <div class="bottom-right">{{ pi.piname }}</div>
+            </a>
+        </div>
+      </div>
+    {% endfor %}
+    </div>
+{% endblock content %}

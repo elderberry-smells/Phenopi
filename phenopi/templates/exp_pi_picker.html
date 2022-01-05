@@ -1,0 +1,18 @@
+{% extends "layout.html" %}
+{% block content %}
+    <div class="content-section">
+        <h1>Available Pi's</h1>
+        <form method="POST" action="#">
+            {% for i in pi %}
+                <label class="picker-container">{{ i.piname }}
+                    <input type="checkbox" checked="checked" value={{ i.id }} name='pickpi'>
+                    <span class="checkmark"></span>
+                </label>
+            {% endfor %}
+            <div><input type="submit" class=btn btn-outline-info name="selectpis" value="Select Pis"></div>
+        </form>
+    </div>
+    <div class="content-section">
+        Put in an image or illustration here to show where the pi's are located when picking them
+    </div>
+{% endblock content %}

@@ -1,0 +1,26 @@
+{% extends "layout.html" %}
+{% block content %}
+    {% for exp in ex %}
+        <article class="media content-section">
+            <div class="media-body">
+                <div class="article-metadata">
+                    <h3><a class="mr-2" href="{{ url_for('experiment_view', exp=exp.exp_name, pi_name=exp.pi_id) }}">{{ exp.exp_name }}</a></h3>
+                    <a class="mr-2" href="{{ url_for('pi_config', pi_name=exp.camera.id) }}">{{ exp.camera.piname }}</a>
+                    <small class="text-muted ml-4">{{ exp.author.username }}</small>
+                    <small class="text-muted ml-4">{{ exp.date_submitted.strftime('%Y-%m-%d') }}</small>
+                    {% if exp.status == 'cancelled' %}
+                        <small class="ml-4 red-input">{{ exp.status }}</small>
+                    {% else %}
+                        <small class="ml-4 green-input">{{ exp.status }}</small>
+                    {% endif %}
+                </div>
+
+                <p class="article-content ml-2">
+                    Capturing Images from: {{ exp.start_date }} to {{ exp.end_date }}
+                    Schedule: Images taken between {{ exp.start_time }} and {{ exp.end_time }}
+                    Timelapse: photos taken every {{ exp.img_interval }} minutes
+                </p>
+            </div>
+        </article>
+    {% endfor %}
+{% endblock content %}
