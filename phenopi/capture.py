@@ -85,7 +85,7 @@ def capture():
     client.connect(hostname="192.168.0.101", port=22, username="bioinf")
 
     with SCPClient(client.get_transport()) as scp:
-        scp.put(image_fname, recursive=True, remote_path=f'/home/bioinf/dump//home/bioinf/pi/phenopi/static/{pi}/experiments/{exp}')
+        scp.put(image_fname, recursive=True, remote_path=f'/home/bioinf/pi/phenopi/static/{pi}/experiments/{exp}')
     
     stdin, stdout, stderr = update_img_db(client, image_fname, uid, piid, exp, pi)
     # print(stdout, stderr)
