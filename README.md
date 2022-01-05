@@ -15,4 +15,4 @@ To come:
 ## dashboard of app
 #### Shows 4 pis in the app are set up, one of which has been taking images (thumbnail of latest image taken)
 
-https://github.com/elderberry-smells/Phenopi/blob/main/phenopi/static/dashboard.png
+![dashboard](https://github.com/elderberry-smells/Phenopi/blob/main/phenopi/static/dashboard.png)
