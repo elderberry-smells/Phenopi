@@ -10,3 +10,9 @@ To come:
 - fix the slideshow for pictures taken
 - addition of greenhouse temps/light outputs.
 - restructure of the project files so everything is organized into a nice and neat package
+
+
+## dashboard of app
+#### Shows 4 pis in the app are set up, one of which has been taking images (thumbnail of latest image taken)
+
+https://github.com/elderberry-smells/Phenopi/blob/main/phenopi/static/dashboard.png
