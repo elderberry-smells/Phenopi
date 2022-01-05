@@ -1,0 +1,81 @@
+{% extends "layout.html" %}
+{% block content %}
+    <div class="container mb-4">
+        <div class="left">
+            <h1>{{ pi.piname }}</h1>
+        </div>
+        <div class="right">
+            {% if pi.status == 'idle' %}
+                <button class="btn btn-outline-info mb-2"><a href="{{ url_for('pi_schedule', pi_name=pi.id) }}">Schedule Pi for Timelapse</a></button>
+            {% else %}
+                {% if current_user.id == experiment.author.id %}
+                    <button type="button" class="btn btn-danger btn-sm m-1" data-toggle="modal" data-target="#deleteModal">Cancel Timelapse</button>
+                {% else %}
+                    <button class="btn btn-outline-info mb-2">Running Timelapse</button>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+    <div class="container">
+        <div class="left">
+            {% if pi.gif_preview %}
+                <img src="{{ url_for('static', filename=pi.gif_preview) }}"/>
+            {% else %}
+                <img src="{{ url_for('static', filename=pi.image_file) }}" width="350" height="250"/>
+            {% endif %}
+        </div>
+        <div class="right ml-4">
+            <div class="article-metadata ml-4">
+                <h3>Raspberry Pi Camera Info</h3>
+            </div>
+            <h4 class="ml-4">Status: {{ pi.status }}</h4>
+            {% if pi.status == 'idle' %}
+                <h4 class="ml-4" href="#">Experiment: No imaging scheduled</h4>
+            {% else %}
+                <h4 class="ml-4"><a href="{{ url_for('experiment_view', exp=experiment.exp_name, pi_name=pi.id) }}">Experiment: {{ experiment.exp_name }}</a></h4>
+            {% endif %}
+        </div>
+        <div class="below mt-4">
+            <h3>Details on the Pi Camera</h3><br>
+            <div class="article-metadata">
+                <h4>Timelapse Information:</h4>
+            </div>
+            {% if pi.status == 'idle' %}
+                <p class="article-content">Information about the timelapse if it was scheduled would go here</p>
+            {% else %}
+                <p class="article-content">Capturing Images from: {{ experiment.start_date }} to {{ experiment.end_date }}</p>
+                <p class="article-content">Schedule: Images between {{ experiment.start_time }} and {{ experiment.end_time }} every day</p>
+                <p class="article-content">Timelapse: photos taken every {{ experiment.img_interval }} minutes</p>
+            {% endif %}
+            <br>
+            <div class="article-metadata">
+                <h4>Raspberry Pi info:</h4>
+            </div>
+            <p class="article-content">Insert things here like storage remaining, CPU temp?</p>
+        </div>
+    </div>
+
+    <!-- Modal for making sure you want to end the images from pi or whole experiment -->
+    <div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteModalLabel">Stop the timelapse?</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <form action="{{ url_for('cancel_timelapse', pi_name=pi.id) }}" method="POST">
+                        <input class="btn btn-danger" type="submit" value="Stop This Pi Only">
+                    </form>
+                    <form action="{{ url_for('cancel_experiment', pi_name=pi.id) }}" method="POST">
+                        <input class="btn btn-danger" type="submit" value="Stop Whole Experiment">
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock content %}
