@@ -12,6 +12,7 @@ from pathlib import Path
 import glob
 from phenopi.models import User, Picam, Experiments
 from phenopi import db
+from crontab import CronTab
 
 
 def save_picture(pic, piname):
@@ -56,6 +57,34 @@ This was an automated email generated at www.briancjames.ca
     mail.send(msg)
 
 
+def create_cron_job(command, start_minute, start_hour, end_hour, start_day, end_day, start_month, end_month, interval, user=None):
+    # generate the necessary cron job commands with the schedule inputs
+    cron = CronTab()
+    
+    # make the bayer image the first image of the day
+    bayer = cron.new(command=command.replace("False", "True"))
+    bayer.minute.on(start_minute)
+    bayer.hour.on(start_hour)
+    bayer.day.during(start_day, end_day)
+    bayer.month.during(start_month, end_month)
+    
+    # make the remainder of the cron jobs
+    job = cron.new(command=command)
+    job.minute.on(start_minute)
+    
+    if interval >= 60:
+        interval = interval // 60
+        job.hour.during(start_hour, end_hour).every(interval)
+    else:
+        job.minute.every(interval)
+        job.hour.during(start_hour, end_hour)
+
+    job.day.during(start_day, end_day)
+    job.month.during(start_month, end_month)
+    
+    return bayer, job
+
+
 def generate_schedule(schedule, pi, userid):
 
     # create a directory for the experiment from that pi to be saved on the server
@@ -68,6 +97,88 @@ def generate_schedule(schedule, pi, userid):
     month_days = {'1': '31', '2': '28', '3': '31', '4': '30', '5': '31', '6': '30',
                   '7': '31', '8':'31', '9': '30', '10': '31', '11': '30', '12': '31'}
 
+   # Extract schedule details
+    start_hour, start_minute = map(int, schedule['start'].split(':'))
+    end_hour, end_minute = map(int, schedule['end'].split(':'))
+    interval = int(schedule['interval'])
+
+    start_date = datetime.strptime(schedule['start_date'], '%Y-%m-%d')
+    end_date = datetime.strptime(schedule['end_date'], '%Y-%m-%d')
+
+    start_day = start_date.day
+    start_month = start_date.month
+    end_day = end_date.day
+    end_month = end_date.month
+
+    command = f'/usr/local/bin/python3.8 /home/pi/phenopi/capture.py -e {schedule["experiment"]} -p {pi.id} -u {userid} -b False'
+
+    cron_list = [] # make a list of the cron outputs to write to a txt file
+    if start_date.year != end_date.year or start_month > end_month:
+        # Create job for the remainder of the first year
+        bayer1, job1 = create_cron_job(command, start_minute, start_hour, end_hour, start_day, 31, start_month, 12, interval, user=userid)
+        cron_list.append(str(bayer1)+'\n') # add the newline to end of each cron job
+        cron_list.append(str(job1)+'\n')
+
+        # Create job for the next year
+        bayer2, job2 = create_cron_job(command, start_minute, start_hour, end_hour, 1, end_day, 1, end_month, interval, user=userid)
+        cron_list.append(str(bayer2)+'\n') # add the newline to end of each cron job
+        cron_list.append(str(job2))
+
+    else:
+        # Single job for the same year
+        bayer1, job1 = create_cron_job(command, start_minute, start_hour, end_hour, start_day, end_day, start_month, end_month, interval, user=userid)
+        cron_list.append(str(bayer1)+'\n') # add the newline to end of each cron job
+        cron_list.append(str(job1))
+
+    # write out the cron job
+    with open(fname, 'w', encoding='utf-8') as outcron:
+        outcron.write(f'#  Setting up schedule for experiment: {schedule["experiment"]}\n')
+        outcron.write(f'#  Running from {schedule["start_date"]} - {schedule["end_date"]}\n')
+        outcron.write(f'#  Images between {schedule["start"]} and {schedule["end"]} with images every {interval} minutes\n\n')
+
+        outcron.write("""
+            # ┌───────────── minute (0 - 59)
+            # │ ┌───────────── hour (0 - 23)
+            # │ │ ┌───────────── day of the month (1 - 31)
+            # │ │ │ ┌───────────── month (1 - 12)
+            # │ │ │ │ ┌───────────── day of the week (0 - 6) (Sunday to Saturday;
+            # │ │ │ │ │                                   7 is also Sunday on some systems)
+            # │ │ │ │ │
+            # │ │ │ │ │
+            # * * * * * command to execute')\n\n""")
+
+        outcron.writelines(cron_list)
+        
+    # transfer that cron file to the pi
+    subprocess.run(["scp", fname, f"{pi.username}@{pi.hostname}:/home/pi/Desktop/phenopi_cron"])
+    pi_cronfile = f'/home/pi/Desktop/phenopi_cron/{schedule["experiment"]}_cronjob.txt'
+
+    port = 22
+    try:
+        client = paramiko.SSHClient()
+        client.load_system_host_keys()
+        client.set_missing_host_key_policy(paramiko.WarningPolicy)
+
+        client.connect(hostname=pi.hostname, port=port, username=pi.username)
+
+        # make sure the date-time on the pi is set to proper time since it can't update time without internet
+        time_now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        stdin, stdout, stderr = client.exec_command(f"sudo date -s '{time_now} CST'")
+
+        # remove any cron jobs currently running
+        remove_command = f'crontab -r'
+        stdin, stdout, stderr = client.exec_command(remove_command)
+
+        # make the newly transferred cronfile as the the crontab    
+        cron_command = f'crontab {pi_cronfile}'
+        stdin, stdout, stderr = client.exec_command(cron_command)
+
+
+    finally:
+        client.close()
+
+    return fname
+    '''
     # get the minutes and hours from the schedule
     start_hour, start_minute = schedule['start'].split(':')
     end_hour, end_minute = schedule['end'].split(':')
@@ -357,7 +468,7 @@ def generate_schedule(schedule, pi, userid):
         client.close()
 
     return fname
-
+'''
 
 def pi_picture(uname, pi_ip, command):
     port = 22
